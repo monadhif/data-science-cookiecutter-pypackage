@@ -1,0 +1,10 @@
+{
+    "author_name": "Mona Lisa",
+    "author_email": "Mona.lisa@gmail.com",
+    "project_name": "initial cookiecutter pypackage",
+    "package_name": "{{ cookiecutter.project_name|lower|replace(' ', '_') }}",
+    "package_description": "An opinionated, minimal cookiecutter template for Python packages",
+    "python_version": [3.8, 3.9, 3.10, 3.11],
+    "use_dependency_manager": ["poetry", "pipenv","none"],
+    "create_virtualenv": ["conda", "virtualenv", "venv", "none"]
+}
