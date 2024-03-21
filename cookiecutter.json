@@ -3,8 +3,8 @@
     "author_email": "Mona.lisa@gmail.com",
     "project_name": "initial cookiecutter pypackage",
     "package_name": "{{ cookiecutter.project_name|lower|replace(' ', '_') }}",
-    "package_description": "An opinionated, minimal cookiecutter template for Python packages",
-    "python_version": [3.8, 3.9, 3.10, 3.11],
+    "package_description": "A cookiecutter template that helps you create suitable Python environments",
+    "python_version": [3.7, 3.8, 3.9, 3.11],
     "use_dependency_manager": ["none", "poetry", "pipenv"],
     "create_virtualenv": ["none", "conda", "virtualenv", "venv"]
 }
