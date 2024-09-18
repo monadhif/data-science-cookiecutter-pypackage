@@ -1,10 +1,10 @@
 {
- "author_name": "Mona Lisa",
+    "author_name": "Mona Lisa",
     "author_email": "Mona.lisa@gmail.com",
     "project_name": "initial cookiecutter pypackage",
     "package_name": "{{ cookiecutter.project_name|lower|replace(' ', '_') }}",
     "package_description": "A cookiecutter template that helps you create suitable Python environments",
-    "python_version": [3.7, 3.8, 3.9, 3.11],
+    "python_version": ["3.7", "3.8", "3.9", "3.11"],
     "use_dependency_manager": ["none", "poetry", "pipenv"],
     "_extensions": ["local_extensions.AdditionalPrompts"]
-}
+  }
