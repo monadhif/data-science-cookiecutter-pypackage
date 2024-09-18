@@ -1,68 +1,51 @@
 #!/usr/bin/env python
-"""Post-generate hook for cookiecutter-pypackage-pyproject template."""
 import os
 import subprocess
+import sys
 
-python_version = "{{ cookiecutter.python_version }}"
+WIN = sys.platform.startswith('win')
 
-# # Handle dependency manager
-# if "{{ cookiecutter.use_dependency_manager }}" == "poetry":
-#     # Check if Poetry is installed
-#     if not subprocess.call("command -v poetry", shell=True):
-#         print("Poetry could not be found, installing...")
-#         subprocess.call(
-#             "curl -sSL https://install.python-poetry.org | python -", shell=True
-#         )
+def execute_cmd(args, shell=False):
+    """Execute shell commands and return output."""
+    try:
+        result = subprocess.run(args, shell=shell, cwd=os.getcwd(), check=True, capture_output=True, text=True)
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        print(f"Error executing command: {e}")
+        sys.exit(1)
 
-#     # Initialize a new Poetry project
-#     print("Initializing a new Poetry project...")
-#     subprocess.call("poetry new {{cookiecutter.project_name}}", shell=True)
+def activate_venv():
+    """Activate virtual environment based on the OS."""
+    venv_dir = ".venv"
 
-#     # Move into the new project directory
-#     os.chdir("{{cookiecutter.project_name}}")
+    if WIN:
+        activate_script = os.path.join(venv_dir, "Scripts", "activate.bat")
+        print(f"Activating virtual environment for Windows: {activate_script}")
+        command = f"{activate_script}"
+    else:
+        activate_script = os.path.join(venv_dir, "bin", "activate")
+        print(f"Activating virtual environment for Unix-based system: {activate_script}")
+        command = f"source {activate_script}"
+    
+    if WIN:
+        # On Windows, use os.system to run batch script
+        os.system(f'cmd /k "{activate_script}"')
+    else:
+        # On Unix-like systems, use shell execution
+        print(f"Run the following command to activate your virtual environment: \nsource {activate_script}")
+        # Depending on the shell used, you might have to just print the command for manual activation.
 
-#     # Set Python version in pyproject.toml
-#     with open("pyproject.toml", "a", encoding="utf-8") as f:
-#         f.write(f"\n[tool.poetry.dependencies]\npython = ^{python_version}")
+def main():
+    """Post-generation hook to activate the virtual environment."""
+    create_virtualenv = "{{ cookiecutter.create_virtualenv }}".lower()
+    
+    if create_virtualenv == "yes":
+        print("Virtual environment creation completed.")
+        activate_venv()
+    else:
+        print("Skipping virtual environment activation.")
+    
+    print("Project setup completed successfully!")
 
-#     # Install dependencies
-#     print("Installing dependencies...")
-#     subprocess.call("poetry install", shell=True)
-# elif "{{ cookiecutter.use_dependency_manager }}" == "pipenv":
-#     # Check if Pipenv is installed
-#     if not subprocess.call("command -v pipenv", shell=True):
-#         print("Pipenv could not be found, installing...")
-#         subprocess.call("pip install pipenv", shell=True)
-
-#     # Initialize a new Pipenv environment with the chosen Python version
-#     print("Initializing a new Pipenv environment...")
-#     subprocess.call(f"pipenv --python {python_version}", shell=True)
-
-#     # Install dependencies
-#     print("Installing dependencies...")
-#     subprocess.call("pipenv install", shell=True)
-# elif "{{ cookiecutter.use_dependency_manager }}" == "none":
-#     print("No dependency manager chosen. Skipping environment setup.")
-#     # Handle virtual environment creation
-#     if "{{ cookiecutter.create_virtualenv }}" == "conda":
-#         # Initialize a new Conda environment
-#         print("Initializing a new Conda environment...")
-#         subprocess.call(
-#             f"conda create --name {{cookiecutter.project_name}} python={python_version}",
-#             shell=True,
-#         )
-#     elif "{{ cookiecutter.create_virtualenv }}" == "virtualenv":
-#         # Initialize a new Virtualenv environment
-#         print("Initializing a new Virtualenv environment...")
-#         subprocess.call(
-#             f"virtualenv -p python{python_version} {{cookiecutter.project_name}}",
-#             shell=True,
-#         )
-#     elif "{{ cookiecutter.create_virtualenv }}" == "venv":
-#         # Initialize a new venv environment
-#         print("Initializing a new venv environment...")
-#         subprocess.call(
-#             f"python{python_version} -m venv {{cookiecutter.project_name}}", shell=True
-#         )
-#     elif "{{ cookiecutter.create_virtualenv }}" == "none":
-#         print("No virtual environment creation chosen. Skipping environment setup.")
+if __name__ == "__main__":
+    main()
