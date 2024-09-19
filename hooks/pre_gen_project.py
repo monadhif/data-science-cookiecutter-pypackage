@@ -4,54 +4,37 @@ import re
 import subprocess
 import sys
 
+WIN = sys.platform.startswith('win')
 
 def run_command(command, check=True, shell=True, capture_output=False):
     """Helper function to run shell commands with error handling."""
     try:
         result = subprocess.run(command, shell=shell, check=check, capture_output=capture_output, text=True)
-        return result.stdout.strip() if capture_output else True
+        if capture_output:
+            return result.stdout.strip()
+        return True
     except subprocess.CalledProcessError as error:
         print(f"Command failed: {error}")
-        return None
-
+        sys.exit(1)
 
 def get_available_python_versions():
     """Get a list of installed Python versions."""
     versions = []
-    if os.name == 'nt':  # Windows
-        try:
-            output = run_command("py -0", capture_output=True)
-            for line in output.splitlines():
-                version = re.search(r"\d+\.\d+", line)
-                if version:
-                    versions.append(version.group())
-        except subprocess.CalledProcessError:
-            print("Failed to get Python versions.")
-    else:  # macOS/Linux
-        try:
-            output = run_command("ls /usr/bin/python*", capture_output=True)
-            for line in output.splitlines():
-                version = re.search(r"python(\d+\.\d+)", line)
-                if version:
-                    versions.append(version.group(1))
-        except subprocess.CalledProcessError:
-            print("Failed to get Python versions.")
+    if WIN:
+        output = run_command("py -0", capture_output=True)
+        versions = re.findall(r"(\d+\.\d+)", output)
+    else:
+        output = run_command("ls /usr/bin/python*", capture_output=True)
+        versions = re.findall(r"python(\d+\.\d+)", output)
     return versions
-
 
 def check_python_version(python_version):
     """Check if the specified Python version is installed and return it if available."""
-    if os.name == 'nt':  # Windows
+    if WIN:
         output = run_command(f"py -{python_version} --version", capture_output=True)
-        if output and python_version in output:
-            return python_version
-    else:  # macOS/Linux
+    else:
         output = run_command(f"python{python_version} --version", capture_output=True)
-        if output and python_version in output:
-            return python_version
-
-    return None
-
+    return python_version if python_version in output else None
 
 def find_compatible_python_version(required_version):
     """Find the closest compatible Python version available on the system."""
@@ -59,7 +42,6 @@ def find_compatible_python_version(required_version):
     if required_version in available_versions:
         return required_version
     
-    # Find the closest version available
     major, minor = map(int, required_version.split('.'))
     for version in available_versions:
         v_major, v_minor = map(int, version.split('.'))
@@ -67,9 +49,8 @@ def find_compatible_python_version(required_version):
             return version
     return available_versions[0] if available_versions else None
 
-
-def create_virtualenv(python_version):
-    """Create a virtual environment using the specified Python version."""
+def create_virtualenv(python_version, use_venv=True):
+    """Create a virtual environment using the specified Python version and tool."""
     venv_dir = ".venv"
     if not os.path.exists(venv_dir):
         available_version = check_python_version(python_version)
@@ -81,47 +62,48 @@ def create_virtualenv(python_version):
                 return False
             print(f"Using available Python version {available_version} instead.")
 
-        print(f"Creating virtual environment with Python {available_version}...")
-        if os.name == 'nt':
-            run_command(f"py -{available_version} -m venv {venv_dir}")
+        print(f"Creating virtual environment with Python {available_version} using {'venv' if use_venv else 'virtualenv'}...")
+        if WIN:
+            run_command(f"py -{available_version} -m {'venv' if use_venv else 'virtualenv'} {venv_dir}")
         else:
-            run_command(f"python{available_version} -m venv {venv_dir}")
+            run_command(f"python{available_version} -m {'venv' if use_venv else 'virtualenv'} {venv_dir}")
         print("Virtual environment created successfully.")
         return True
     else:
         print(f"Virtual environment already exists in {venv_dir}.")
     return False
 
-
 def activate_virtualenv():
-    """Activate the virtual environment."""
+    """Provide activation instructions for the virtual environment."""
     venv_dir = ".venv"
-    if os.name == 'nt':
+    if WIN:
         activate_script = os.path.join(venv_dir, "Scripts", "activate.bat")
-        command = activate_script
     else:
         activate_script = os.path.join(venv_dir, "bin", "activate")
-        command = f"source {activate_script}"
     
-    print(f"Activating virtual environment: {command}")
-    return run_command(command, shell=True)
+    if not os.path.exists(activate_script):
+        print(f"Activation script not found: {activate_script}")
+        return False
 
+    print(f"To activate the virtual environment, use the following command:")
+    if WIN:
+        print(f"   {activate_script}")
+    else:
+        print(f"   source {activate_script}")
+    return True
 
 def install_poetry(python_version):
     """Install Poetry and initialize project dependencies."""
     if not run_command("poetry -V", capture_output=True):
         print("Poetry is not installed. Installing Poetry...")
-        if not run_command("curl -sSL https://install.python-poetry.org | python -"):
-            print("Failed to install Poetry.")
-            sys.exit(1)
+        run_command("curl -sSL https://install.python-poetry.org | python -")
 
     print("Creating pyproject.toml file with Poetry...")
     run_command(f"poetry env use python{python_version}")
     run_command("poetry init --name '{{ cookiecutter.project_name }}' --author '{{ cookiecutter.author_name }}' --no-interaction")
 
     print("Installing dependencies with Poetry...")
-    run_command(f"poetry install")
-
+    run_command("poetry install")
 
 def install_pipenv(python_version):
     """Install Pipenv and set up the environment."""
@@ -132,6 +114,45 @@ def install_pipenv(python_version):
     print(f"Creating Pipenv environment with Python {python_version}...")
     run_command(f"pipenv --python {python_version}")
 
+def install_conda(python_version):
+    """Install Conda and set up the environment."""
+    if not run_command("conda --version", capture_output=True):
+        print("Conda is not installed. Please install Conda and try again.")
+        sys.exit(1)
+    
+    env_name = "{{ cookiecutter.project_name|lower|replace(' ', '_') }}_env"
+    print(f"Creating Conda environment with Python {python_version}...")
+    run_command(f"conda create -n {env_name} python={python_version} --yes")
+    print(f"Conda environment '{env_name}' created. Activate it with:")
+    print(f"   conda activate {env_name}")
+
+# def prompt_for_virtualenv_choice():
+#     """Prompt the user for choosing between venv and virtualenv."""
+#     while True:
+#         choice = input("Choose virtual environment tool (venv/virtualenv): ").strip().lower()
+#         if choice in ['venv', 'virtualenv']:
+#             return choice
+#         print("Invalid choice. Please select 'venv' or 'virtualenv'.")
+
+def prompt_for_virtualenv_choice():
+    """Prompt the user for choosing between venv, virtualenv, or none."""
+    choices = {
+        '1': 'None',
+        '2': 'venv',
+        '3': 'virtualenv'
+    }
+    
+    while True:
+        print("Choose virtual environment tool:")
+        for key, value in choices.items():
+            print(f" {key} - {value}")
+        
+        choice = input("Enter your choice (1/2/3): ").strip()
+        
+        if choice in choices:
+            return choices[choice]
+        
+        print("Invalid choice. Please select 1, 2, or 3.")
 
 def main():
     project_name = "{{ cookiecutter.project_name }}"
@@ -141,26 +162,34 @@ def main():
     print("Starting project setup...")
     print(f"Project name: {project_name}")
     print(f"Python version: {python_version}")
+    print(f"Dependency manager: {use_dependency_manager}")
 
-    # Create and activate the virtual environment
-    if create_virtualenv(python_version):
-        if not activate_virtualenv():
-            print("Failed to activate virtual environment.")
-            sys.exit(1)
-
-    # Handle dependency manager setup
-    if use_dependency_manager == "poetry":
+    if use_dependency_manager == "none":
+        print("No dependency manager selected.")
+        venv_tool = prompt_for_virtualenv_choice()
+        if venv_tool=="None":
+            print("No virtual environment setup required.")
+        else:
+            use_venv = venv_tool == "venv"
+            if create_virtualenv(python_version, use_venv):
+                activate_virtualenv()
+            else:
+                print("Virtual environment creation failed or skipped.")
+    
+    elif use_dependency_manager == "poetry":
         install_poetry(python_version)
+    
     elif use_dependency_manager == "pipenv":
         install_pipenv(python_version)
-    elif use_dependency_manager == "none":
-        print("No dependency manager chosen. Skipping dependency installation.")
+    
+    elif use_dependency_manager == "conda":
+        install_conda(python_version)
+    
     else:
         print("Unknown dependency manager selected. Exiting.")
         sys.exit(1)
 
     print("Project setup completed successfully!")
-
 
 if __name__ == "__main__":
     main()

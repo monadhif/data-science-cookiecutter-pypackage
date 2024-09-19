@@ -1,50 +1,41 @@
 #!/usr/bin/env python
 import os
-import subprocess
 import sys
 
 WIN = sys.platform.startswith('win')
 
-def execute_cmd(args, shell=False):
-    """Execute shell commands and return output."""
-    try:
-        result = subprocess.run(args, shell=shell, cwd=os.getcwd(), check=True, capture_output=True, text=True)
-        return result.stdout
-    except subprocess.CalledProcessError as e:
-        print(f"Error executing command: {e}")
-        sys.exit(1)
-
 def activate_venv():
-    """Activate virtual environment based on the OS."""
+    """Provide instructions to activate the virtual environment based on the OS."""
     venv_dir = ".venv"
+
+    if not os.path.exists(venv_dir):
+        print("Virtual environment not found.")
+        return False
 
     if WIN:
         activate_script = os.path.join(venv_dir, "Scripts", "activate.bat")
-        print(f"Activating virtual environment for Windows: {activate_script}")
-        command = f"{activate_script}"
+        print(f"To activate the virtual environment on Windows, run: \n{activate_script}")
+        print("To deactivate the virtual environment, run 'deactivate' command.")
     else:
         activate_script = os.path.join(venv_dir, "bin", "activate")
-        print(f"Activating virtual environment for Unix-based system: {activate_script}")
-        command = f"source {activate_script}"
+        print(f"To activate the virtual environment on Unix-based systems, run: \nsource {activate_script}")
     
-    if WIN:
-        # On Windows, use os.system to run batch script
-        os.system(f'cmd /k "{activate_script}"')
-    else:
-        # On Unix-like systems, use shell execution
-        print(f"Run the following command to activate your virtual environment: \nsource {activate_script}")
-        # Depending on the shell used, you might have to just print the command for manual activation.
+    return True
 
 def main():
-    """Post-generation hook to activate the virtual environment."""
-    create_virtualenv = "{{ cookiecutter.create_virtualenv }}".lower()
-    
-    if create_virtualenv == "yes":
-        print("Virtual environment creation completed.")
-        activate_venv()
+    """Post-generation hook to provide instructions for activating the virtual environment."""
+    # Check the dependency manager choice from cookiecutter context
+    use_dependency_manager = "{{ cookiecutter.dependency_manager }}".lower()
+
+    if use_dependency_manager == "none":
+        # In case of 'none', assume virtual environment creation was desired
+        if activate_venv():
+            print("Activation instructions displayed.")
+        else:
+            print("No virtual environment found to activate.")
     else:
-        print("Skipping virtual environment activation.")
-    
+        print("No virtual environment setup required for this dependency manager.")
+
     print("Project setup completed successfully!")
 
 if __name__ == "__main__":
