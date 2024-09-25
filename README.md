@@ -29,7 +29,7 @@ Before using the template, ensure you have the following installed:
 1. Generate your project with Cookiecutter:
 
     ```bash
-    cookiecutter https://github.com/your-repo-url.git
+    cookiecutter https://github.com/monadhif/Initial-cookiecutter-pypackage
     ```
 
 2. You will be prompted to provide the following information:
