@@ -73,7 +73,7 @@ def main():
         print(f"Python {selected_python_version} is installed and will be used.")
         write_python_version(selected_python_version)
 
-    print("Pre-generation validation completed successfully!")
+    print("\033[92mPre-generation validation completed successfully!\033[0m")
 
 if __name__ == "__main__":
     main()

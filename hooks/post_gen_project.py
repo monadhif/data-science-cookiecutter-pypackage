@@ -123,8 +123,8 @@ def main():
     else:
         print("Unknown dependency manager selected. Exiting.")
         sys.exit(1)
-
-    print("Post-generation setup completed successfully!")
+    print("\033[92mPost-generation setup completed successfully!\033[0m")
+    print("\n✅ All done! Your data science package is ready to go.\n")
 
     try:
         import os
