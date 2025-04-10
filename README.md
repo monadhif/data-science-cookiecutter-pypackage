@@ -44,6 +44,7 @@ Before using the template, make sure you have the following installed:
 
 ```bash
 cookiecutter https://github.com/monadhif/data-science-cookiecutter-pypackage
+```
 
 
 When prompted, fill in the required fields:
